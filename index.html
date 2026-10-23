@@ -2,120 +2,399 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>لعبة جمع النقاط</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #101827;
-      color: white;
-      padding: 25px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>صائد النجوم ⭐</title>
+<style>
+* { box-sizing: border-box; }
 
-    #board {
-      position: relative;
-      width:  min(90vw, 500px);
-      height: 350px;
-      margin: 20px auto;
-      background: #243247;
-      border-radius: 15px;
-      overflow: hidden;
-    }
+body {
+  margin: 0;
+  padding: 18px 10px;
+  text-align: center;
+  color: white;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(160deg,#10112f,#27205b,#101827);
+}
 
-    #target {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      background: #38e07b;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      display: none;
-    }
+h1 { margin: 8px 0; font-size: 30px; }
+p { color: #d8d7ff; }
 
-    button {
-      padding: 12px 22px;
-      font-size: 17px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 15px auto;
+}
 
-    #start {
-      background: #4388ff;
-      color: white;
-    }
-  </style>
+.stat {
+  background: #ffffff18;
+  border: 1px solid #ffffff25;
+  padding: 10px 15px;
+  border-radius: 12px;
+  font-weight: bold;
+}
+
+#game {
+  display: block;
+  width: min(94vw, 400px);
+  height: auto;
+  margin: auto;
+  border: 2px solid #8c75ff;
+  border-radius: 16px;
+  background: #10152f;
+  box-shadow: 0 0 28px #7760ff35;
+  touch-action: none;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 22px;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+#start {
+  color: white;
+  background: #7657ff;
+  margin: 12px;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin: 12px;
+  direction: ltr;
+}
+
+.move {
+  width: 90px;
+  height: 55px;
+  background: #ffffff20;
+  color: white;
+  border: 1px solid #ffffff55;
+  font-size: 25px;
+  touch-action: none;
+  user-select: none;
+}
+
+button:active { transform: scale(.96); }
+.small { font-size: 13px; color: #c4c0f5; }
+</style>
 </head>
 <body>
-  <h1>🎮 لعبة جمع النقاط</h1>
-  <h2>النقاط: <span id="score">0</span></h2>
-  <h3>الوقت: <span id="time">30</span> ثانية</h3>
 
-  <button id="start">ابدأ اللعب</button>
+<h1>⭐ صائد النجوم ⭐</h1>
+<p>اجمع النجوم واهرب من القنابل!</p>
 
-  <div id="board">
-    <button id="target" aria-label="اجمع نقطة"></button>
-  </div>
+<div class="stats">
+  <div class="stat">⭐ النقاط: <span id="score">0</span></div>
+  <div class="stat">❤️ الحياة: <span id="lives">3</span></div>
+  <div class="stat">🚀 المستوى: <span id="level">1</span></div>
+</div>
 
-  <h3 id="message">اضغط ابدأ وحاول تجمع أكبر عدد!</h3>
+<canvas id="game" width="400" height="560"></canvas>
 
-  <script>
-    const board = document.getElementById("board");
-    const target = document.getElementById("target");
-    const scoreText = document.getElementById("score");
-    const timeText = document.getElementById("time");
-    const message = document.getElementById("message");
-    const start = document.getElementById("start");
+<button id="start">🎮 ابدأ اللعب</button>
 
-    let score = 0;
-    let time = 30;
-    let timer;
-    let playing = false;
+<div class="controls">
+  <button class="move" id="left">⬅️</button>
+  <button class="move" id="right">➡️</button>
+</div>
 
-    function moveTarget() {
-      const maxX = board.clientWidth - target.offsetWidth;
-      const maxY = board.clientHeight - target.offsetHeight;
+<p class="small">الكمبيوتر: استخدم الأسهم ← → أو A و D</p>
+<p class="small">الجوال: اضغط الأسهم أسفل اللعبة</p>
 
-      target.style.left = Math.random() * maxX + "px";
-      target.style.top = Math.random() * maxY + "px";
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const levelEl = document.getElementById("level");
+const startBtn = document.getElementById("start");
+
+const W = canvas.width;
+const H = canvas.height;
+
+let player, objects, score, lives, level;
+let running = false;
+let lastTime = 0;
+let spawnTimer = 0;
+let animationId = 0;
+let leftPressed = false;
+let rightPressed = false;
+let invincible = 0;
+let best = 0;
+
+try {
+  best = Number(localStorage.getItem("starBest")) || 0;
+} catch (e) {}
+
+function resetGame() {
+  player = { x: W / 2, y: H - 55, size: 25, speed: 290 };
+  objects = [];
+  score = 0;
+  lives = 3;
+  level = 1;
+  spawnTimer = 0;
+  invincible = 0;
+  lastTime = 0;
+  leftPressed = false;
+  rightPressed = false;
+
+  updateStats();
+}
+
+function updateStats() {
+  scoreEl.textContent = score;
+  livesEl.textContent = lives;
+  levelEl.textContent = level;
+}
+
+function startGame() {
+  cancelAnimationFrame(animationId);
+  resetGame();
+  running = true;
+  startBtn.textContent = "🔄 إعادة اللعب";
+  animationId = requestAnimationFrame(loop);
+}
+
+function spawnObject() {
+  const bombChance = Math.min(0.22 + level * 0.035, 0.48);
+
+  objects.push({
+    x: 20 + Math.random() * (W - 40),
+    y: -25,
+    size: 13 + Math.random() * 5,
+    speed: 120 + level * 18 + Math.random() * 65,
+    type: Math.random() < bombChance ? "bomb" : "star",
+    rotation: Math.random() * 6
+  });
+}
+
+function drawBackground() {
+  ctx.fillStyle = "#10152f";
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 45; i++) {
+    const x = (i * 83 + 17) % W;
+    const y = (i * 127 + 23) % H;
+    ctx.fillStyle = i % 3 === 0 ? "#a99bff" : "#ffffff70";
+    ctx.fillRect(x, y, 2, 2);
+  }
+}
+
+function drawPlayer() {
+  if (invincible > 0 && Math.floor(invincible * 12) % 2 === 0) {
+    return;
+  }
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+
+  ctx.font = "39px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "#55eaff";
+  ctx.shadowBlur = 18;
+  ctx.fillText("🚀", 0, 0);
+
+  ctx.restore();
+}
+
+function drawObject(obj) {
+  ctx.save();
+  ctx.translate(obj.x, obj.y);
+  ctx.rotate(obj.rotation);
+
+  ctx.font = `${obj.size * 2}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = obj.type === "star" ? "#ffdf55" : "#ff5050";
+
+  ctx.fillText(obj.type === "star" ? "⭐" : "💣", 0, 0);
+  ctx.restore();
+}
+
+function endGame() {
+  running = false;
+  leftPressed = false;
+  rightPressed = false;
+
+  if (score > best) {
+    best = score;
+    try {
+      localStorage.setItem("starBest", String(best));
+    } catch (e) {}
+  }
+
+  drawBackground();
+  objects.forEach(drawObject);
+  drawPlayer();
+
+  ctx.fillStyle = "#080a20dd";
+  ctx.fillRect(20, 175, W - 40, 205);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffe16b";
+  ctx.font = "bold 30px Arial";
+  ctx.fillText("انتهت اللعبة!", W / 2, 225);
+
+  ctx.fillStyle = "white";
+  ctx.font = "bold 23px Arial";
+  ctx.fillText("نتيجتك: " + score, W / 2, 270);
+
+  ctx.font = "17px Arial";
+  ctx.fillText("أفضل نتيجة: " + best, W / 2, 310);
+  ctx.fillStyle = "#bfb7ff";
+  ctx.fillText("اضغط إعادة اللعب للمحاولة!", W / 2, 350);
+
+  startBtn.textContent = "🔄 العب مرة ثانية";
+}
+
+function loop(timestamp) {
+  if (!running) return;
+
+  const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, 0.04) : 0;
+  lastTime = timestamp;
+
+  level = Math.floor(score / 10) + 1;
+
+  if (leftPressed) player.x -= player.speed * dt;
+  if (rightPressed) player.x += player.speed * dt;
+
+  player.x = Math.max(23, Math.min(W - 23, player.x));
+
+  if (invincible > 0) invincible -= dt;
+
+  spawnTimer += dt;
+  const spawnEvery = Math.max(0.30, 0.85 - level * 0.045);
+
+  if (spawnTimer >= spawnEvery) {
+    spawnTimer = 0;
+    spawnObject();
+  }
+
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const obj = objects[i];
+    obj.y += obj.speed * dt;
+    obj.rotation += dt;
+
+    const dx = obj.x - player.x;
+    const dy = obj.y - player.y;
+    const hit = Math.hypot(dx, dy) < obj.size + 20;
+
+    if (hit) {
+      if (obj.type === "star") {
+        score++;
+      } else if (invincible <= 0) {
+        lives--;
+        invincible = 1.2;
+      }
+
+      objects.splice(i, 1);
+      updateStats();
+
+      if (lives <= 0) {
+        endGame();
+        return;
+      }
+
+      continue;
     }
 
-    start.addEventListener("click", () => {
-      clearInterval(timer);
-      score = 0;
-      time = 30;
-      playing = true;
+    if (obj.y > H + 30) {
+      objects.splice(i, 1);
+    }
+  }
 
-      scoreText.textContent = score;
-      timeText.textContent = time;
-      message.textContent = "يلا بسرعة! اضغط على المربع الأخضر";
-      start.disabled = true;
-      target.style.display = "block";
-      moveTarget();
+  drawBackground();
+  objects.forEach(drawObject);
+  drawPlayer();
 
-      timer = setInterval(() => {
-        time--;
-        timeText.textContent = time;
+  ctx.fillStyle = "#ffffffbb";
+  ctx.font = "14px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText("BEST: " + best, 12, 25);
 
-        if (time <= 0) {
-          clearInterval(timer);
-          playing = false;
-          target.style.display = "none";
-          start.disabled = false;
-          message.textContent = `انتهت اللعبة! نتيجتك ${score} نقطة 🎉`;
-        }
-      }, 1000);
-    });
+  animationId = requestAnimationFrame(loop);
+}
 
-    target.addEventListener("click", () => {
-      if (!playing) return;
-      score++;
-      scoreText.textContent = score;
-      moveTarget();
-    });
-  </script>
+function bindHold(id, direction) {
+  const btn = document.getElementById(id);
+
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (direction === "left") leftPressed = true;
+    else rightPressed = true;
+    try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  function release(e) {
+    if (direction === "left") leftPressed = false;
+    else rightPressed = false;
+  }
+
+  btn.addEventListener("pointerup", release);
+  btn.addEventListener("pointercancel", release);
+  btn.addEventListener("lostpointercapture", release);
+}
+
+bindHold("left", "left");
+bindHold("right", "right");
+
+document.addEventListener("keydown", e => {
+  if (["ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+    e.preventDefault();
+  }
+
+  if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") {
+    leftPressed = true;
+  }
+
+  if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") {
+    rightPressed = true;
+  }
+
+  if (e.key === " " && !running) startGame();
+});
+
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") {
+    leftPressed = false;
+  }
+
+  if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") {
+    rightPressed = false;
+  }
+});
+
+window.addEventListener("blur", () => {
+  leftPressed = false;
+  rightPressed = false;
+});
+
+startBtn.addEventListener("click", startGame);
+
+resetGame();
+drawBackground();
+drawPlayer();
+
+ctx.fillStyle = "#ffffff";
+ctx.textAlign = "center";
+ctx.font = "bold 23px Arial";
+ctx.fillText("جاهز للتحدي ياسبك؟", W / 2, 235);
+
+ctx.font = "17px Arial";
+ctx.fillStyle = "#d4ceff";
+ctx.fillText("اجمع 10 نجوم للانتقال للمستوى التالي", W / 2, 275);
+</script>
+
 </body>
 </html>
