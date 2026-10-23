@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لعبة جمع النقاط</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #101827;
+      color: white;
+      padding: 25px;
+    }
+
+    #board {
+      position: relative;
+      width:  min(90vw, 500px);
+      height: 350px;
+      margin: 20px auto;
+      background: #243247;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    #target {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: #38e07b;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: none;
+    }
+
+    button {
+      padding: 12px 22px;
+      font-size: 17px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #start {
+      background: #4388ff;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 لعبة جمع النقاط</h1>
+  <h2>النقاط: <span id="score">0</span></h2>
+  <h3>الوقت: <span id="time">30</span> ثانية</h3>
+
+  <button id="start">ابدأ اللعب</button>
+
+  <div id="board">
+    <button id="target" aria-label="اجمع نقطة"></button>
+  </div>
+
+  <h3 id="message">اضغط ابدأ وحاول تجمع أكبر عدد!</h3>
+
+  <script>
+    const board = document.getElementById("board");
+    const target = document.getElementById("target");
+    const scoreText = document.getElementById("score");
+    const timeText = document.getElementById("time");
+    const message = document.getElementById("message");
+    const start = document.getElementById("start");
+
+    let score = 0;
+    let time = 30;
+    let timer;
+    let playing = false;
+
+    function moveTarget() {
+      const maxX = board.clientWidth - target.offsetWidth;
+      const maxY = board.clientHeight - target.offsetHeight;
+
+      target.style.left = Math.random() * maxX + "px";
+      target.style.top = Math.random() * maxY + "px";
+    }
+
+    start.addEventListener("click", () => {
+      clearInterval(timer);
+      score = 0;
+      time = 30;
+      playing = true;
+
+      scoreText.textContent = score;
+      timeText.textContent = time;
+      message.textContent = "يلا بسرعة! اضغط على المربع الأخضر";
+      start.disabled = true;
+      target.style.display = "block";
+      moveTarget();
+
+      timer = setInterval(() => {
+        time--;
+        timeText.textContent = time;
+
+        if (time <= 0) {
+          clearInterval(timer);
+          playing = false;
+          target.style.display = "none";
+          start.disabled = false;
+          message.textContent = `انتهت اللعبة! نتيجتك ${score} نقطة 🎉`;
+        }
+      }, 1000);
+    });
+
+    target.addEventListener("click", () => {
+      if (!playing) return;
+      score++;
+      scoreText.textContent = score;
+      moveTarget();
+    });
+  </script>
+</body>
+</html>
